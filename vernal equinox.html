@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ja"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>記事タイトル</title>
+    <style>
+        .text-block {
+            text-align: center;
+        }
+        /* ——— base style ——— */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Hiragino Kaku Gothic ProN','メイリオ','Meiryo',sans-serif;
+            line-height: 2; color: #e0e0e0; background: #000; padding: 0; cursor: none;
+        }
+
+        #cursor {
+            position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 9999;
+            transform: translate(-50%,-50%);
+            background: radial-gradient(circle,#fff 0%,#fff 40%,#ffeecc 70%,transparent 100%);
+            box-shadow: 0 0 15px #fff,0 0 30px #fff,0 0 45px #ffeecc;
+            clip-path: polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);
+            animation: starMorph 2s ease-in-out infinite;
+        }
+
+        @keyframes starMorph {
+            0%,100% { clip-path: polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%); }
+            25% { clip-path: polygon(50% 5%,65% 30%,95% 40%,70% 55%,85% 90%,50% 75%,15% 90%,30% 55%,5% 40%,35% 30%); }
+            50% { clip-path: polygon(50% 2%,58% 38%,96% 32%,66% 60%,82% 88%,50% 68%,18% 88%,34% 60%,4% 32%,42% 38%); }
+            75% { clip-path: polygon(50% 8%,63% 33%,92% 38%,72% 58%,77% 93%,50% 72%,23% 93%,28% 58%,8% 38%,37% 33%); }
+        }
+
+        .cursor-trail { position: fixed; width: 4px; height: 4px; border-radius: 50%; pointer-events: none; z-index: 9998; animation: trailFade 2s ease-out forwards; }
+        @keyframes trailFade { 0%{ transform: scale(1); opacity:0.9 } 100%{ transform: scale(0); opacity:0 } }
+
+        .container { max-width:100%; margin:0; background:#000; }
+
+        .top-link { background:#000; padding:15px; text-align:center; border-bottom:1px solid #333; }
+        .top-link a {
+            color:#e0e0e0; text-decoration:none; font-size:1.5em; font-weight:900;
+            letter-spacing:0.3em; position:relative; z-index:2; font-family:'Impact','Arial Black',sans-serif;
+            font-style:italic; text-transform:uppercase; transform:skewX(-10deg); display:inline-block;
+            transition:color .3s;
+        }
+        .top-link a:hover { color:#fff; text-shadow:0 0 10px #9d00ff,0 0 20px #9d00ff; }
+
+        @keyframes firework {
+            0% { transform:translate(calc(-50% + var(--x)*0),calc(-50% + var(--y)*0)) scale(1); opacity:1; }
+            100% { transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) scale(0); opacity:0; }
+        }
+        .firework-particle {
+            position:absolute; width:2px; height:2px; border-radius:50%; pointer-events:none;
+            animation:firework 1.2s ease-out forwards;
+        }
+
+        header { color:#fff; padding:10px; text-align:center; border-bottom:1px solid #333; }
+        h1 { font-size:1.4em; margin-bottom:15px; }
+        .meta { font-size:0.75em; color:#999; }
+
+        /* ===== タグセレクタ ===== */
+        .tag-selector {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            font-size: 0.75em;
+        }
+        .tag-group {
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 999px;
+            padding: 4px 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .tag-group label {
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 600;
+            color: #bbb;
+        }
+        .tag-group select {
+            background: #000;
+            color: #e0e0e0;
+            border: 1px solid #444;
+            border-radius: 999px;
+            padding: 2px 6px;
+            font-size: 0.75em;
+            outline: none;
+        }
+        .tag-group select:focus {
+            border-color: #9d00ff;
+            box-shadow: 0 0 6px rgba(157,0,255,0.6);
+        }
+
+        article { padding:0; }
+
+        .toolbar {
+            position:sticky; top:0; background:#111; padding:15px; border-bottom:1px solid #333;
+            display:flex; gap:10px; justify-content:center; z-index:100;
+        }
+        .toolbar button {
+            background:#333; color:#e0e0e0; border:1px solid #555; padding:8px 15px;
+            border-radius:3px; cursor:pointer; font-size:0.85em;
+        }
+
+        .content-block { padding:10px; border:1px solid transparent; transition:border-color .3s; position:relative; }
+        .content-block:hover { border-color:#444; }
+
+        .block-controls {
+            position:absolute; top:5px; right:5px; opacity:0; display:flex; gap:5px; transition:opacity .3s;
+        }
+        .content-block:hover .block-controls { opacity:1; }
+
+        .drag-handle { cursor:move; text-align:center; color:#555; font-size:0.8em; padding:5px; user-select:none; }
+        .content-block.dragging { opacity:0.5; }
+
+        .text-block h2 { color:#fff; font-size:0.9em; margin-bottom:10px; }
+        .text-block p { font-size:0.85em; margin-bottom:10px; }
+
+        .image-block img { max-width:100%; border:1px solid #333; }
+        .audio-block audio { width:100%; max-width:500px; }
+
+        /* 動画ブロック用 */
+        .video-block video {
+            width: 100%;
+            max-width: 600px;
+            border: 1px solid #333;
+            display: block;
+            margin: 0 auto;
+        }
+
+        footer { background:#2d3748; color:white; text-align:center; padding:10px; margin-top:20px; }
+
+        .upload-prompt { border:1px dashed #555; padding:20px; text-align:center; cursor:pointer; color:#666; }
+        input[type=file] { display:none; }
+    </style>
+</head>
+
+<body>
+    <div id="cursor"></div>
+
+    <div class="container">
+        <div class="top-link" id="topLink">
+            <a href="../spaceship3.html" target="_blank">SPACESHIP</a>
+        </div>
+
+        <header>
+            <h1>Fantasy Springs #1 vernal equinox</h1>
+            <div class="meta">公開日: 2026年4月12日 | 著者: molly</div>
+
+            <!-- MODE / AREA / AURA タグの指定 UI -->
+            <div class="tag-selector" style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; font-size: 0.75em;"><div style="background: rgb(17, 17, 17); border: 1px solid rgb(51, 51, 51); border-radius: 999px; padding: 4px 10px; color: rgb(187, 187, 187);"><span style="text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">MODE:</span> <span style="color: #e0e0e0;">DEPARTURE</span></div><div style="background: rgb(17, 17, 17); border: 1px solid rgb(51, 51, 51); border-radius: 999px; padding: 4px 10px; color: rgb(187, 187, 187);"><span style="text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">AREA:</span> <span style="color: #e0e0e0;">GALAXY</span></div><div style="background: rgb(17, 17, 17); border: 1px solid rgb(51, 51, 51); border-radius: 999px; padding: 4px 10px; color: rgb(187, 187, 187);"><span style="text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">AURA:</span> <span style="color: #e0e0e0;">SUNRISE</span></div></div>
+        </header>
+
+        
+
+        <!-- エクスポート名入力モーダル -->
+        <div id="exportModal" style="display: none; position: fixed; top: 0px; left: 0px; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 10000; justify-content: center; align-items: center;">
+            <div style="background:#111; border:2px solid #9d00ff; border-radius:10px; padding:30px; max-width:500px; width:90%;">
+                <h3 style="color:#fff; margin-bottom:20px; text-align:center;">エクスポート設定</h3>
+                
+                <div style="margin-bottom:20px;">
+                    <label style="color:#bbb; display:block; margin-bottom:8px; font-size:0.9em;">HTMLファイル名:</label>
+                    <input type="text" id="htmlFileName" value="article" style="width:100%; padding:10px; background:#000; border:1px solid #444; border-radius:5px; color:#e0e0e0; font-size:1em;">
+                    <div style="color:#666; font-size:0.75em; margin-top:5px;">※ .html は自動的に追加されます</div>
+                </div>
+                
+                <div style="margin-bottom:30px;">
+                    <label style="color:#bbb; display:block; margin-bottom:8px; font-size:0.9em;">ZIPファイル名:</label>
+                    <input type="text" id="zipFileName" value="exported_page" style="width:100%; padding:10px; background:#000; border:1px solid #444; border-radius:5px; color:#e0e0e0; font-size:1em;">
+                    <div style="color:#666; font-size:0.75em; margin-top:5px;">※ .zip は自動的に追加されます</div>
+                </div>
+                
+                <div style="display:flex; gap:10px; justify-content:center;">
+                    <button onclick="cancelExport()" style="background:#333; color:#e0e0e0; border:1px solid #555; padding:10px 30px; border-radius:5px; cursor:pointer; font-size:1em;">キャンセル</button>
+                    <button onclick="confirmExport()" style="background:#9d00ff; color:#fff; border:none; padding:10px 30px; border-radius:5px; cursor:pointer; font-size:1em; font-weight:bold;">エクスポート</button>
+                </div>
+            </div>
+        </div>
+
+        <article id="editor" class="editor-container">
+            <div class="content-block text-block">
+                
+                
+                <h2><p class="MsoNormal">　<span style="font-family:&quot;Yu Gothic Light&quot;,sans-serif;
+mso-ascii-theme-font:major-latin;mso-fareast-theme-font:major-latin;mso-hansi-theme-font:
+major-latin">ねちょねちょのピンクの内壁のスペースシップから地球を見下ろし、足の下で白く広がるものが雲なんだと認識するころには、足も背中も目や脳すらも、旋毛や銀河、心に見いだされるような右回りの渦に巻き込まれていた。ヴァルが空から降ってくる！　ヴァルの感覚する世界は無限に透き通る青の中に広がってく。空気やマグマ、それぞれのエレメンツ同士が熱狂的なダンスを踊り、ヴァルは落下とともに逆に重力感覚を失うことになる。思考、どんなイメージを投げかけてもすべてが無限の青へ発散していくこの無限の感覚の広がりの背後には、無限の闇が控え少しでも目をつむろうものならば、０、死の暗がりに落ちこむことは誰にでも本能的に理解ができる。バッハ、遊星、０のこと、、、、<span lang="EN-US"><o:p></o:p></span></span></p>
+
+<p class="MsoNormal"><span style="font-family:&quot;Yu Gothic Light&quot;,sans-serif;
+mso-ascii-theme-font:major-latin;mso-fareast-theme-font:major-latin;mso-hansi-theme-font:
+major-latin">　無限に広がる青空で宇宙的時間が体に流れ込む間にも、しれっと白いベッドはだんだんとヴァルのほうへ近づいている。だが、青と交わっている今のヴァルには、そのベッドへの落下はもちろん感覚されず、この宇宙的時間の背後でベッドは彼を引き寄せているのだ。そんなように突然、ベッドに飛び込む寸前、白が彼を包み込む直前の、微分時間でのこと、そこには大洋の時間がつつましく、そして壮大なホールのように広がり彼を包み込む。彼はそのダンスする永遠のスポットで、夢をみる。大きく広がる青は閃光の束に、一閃の光線へまで還元されそれらの光の流れを飛び移り、弾けていくヴァル。空気、光、水、火、タンパク質から<span lang="EN-US">DNA</span>、二重螺旋、愛、すべてはあらゆる加速度、方向、硬度で流れ、それらをジャンプしてファンタスティックライドに。駆け抜けていく。永遠のあの真理に向けて、またその周りを駆け巡る。ヴァルはベッドのギリギリ上で、そのやわらかさに包まれ、眠りについた。<span lang="EN-US"><o:p></o:p></span></span></p>
+
+<p class="MsoNormal"><span style="font-family:&quot;Yu Gothic Light&quot;,sans-serif;
+mso-ascii-theme-font:major-latin;mso-fareast-theme-font:major-latin;mso-hansi-theme-font:
+major-latin">　ビッグヌードルが覆いつくす地球。大昔、宇宙からやってきたキノコを食べたサルが、松果体に光を貯めようと天に向かい二足歩行になったと同時に生まれた力、重力がヴァルを大洋から引き摺り出す。足の親指を地面にめり込ませて、太陽を見上げたその時に始まった重力の時間はビッグヌードルという知的生命体において収束した。「この世界は光と重力でできている」シモーヌヴァイユが涙の中で書き記した言葉は、帝国のスローガンに書き換わり、人間は光と重力に体を奪われた、この時間の終点。ヴァルはビッグヌードルに出会い、白いベッドに身を包むと無限に広がっていた世界が一気にゼロに収束し、眠りから醒めて体を感じる。あらゆる粒が体に衝突することによって。粒には様々ある。水、氷、そしてそれらの粒を固定化させるビッグヌードルの偏在する意志に。<span lang="EN-US"><o:p></o:p></span></span></p>
+
+<p class="MsoNormal"><span style="font-family:&quot;Yu Gothic Light&quot;,sans-serif;
+mso-ascii-theme-font:major-latin;mso-fareast-theme-font:major-latin;mso-hansi-theme-font:
+major-latin">　「いえーい、やーー」ヴァルは叫んで、雲を抜け出す。彼はビッグヌードルのおかしいほどにだらしなさからかけ離れた整合の対話をなんかするりと抜け出した。それがいつもやるように、意識を微小時間と、透明な博物館アーカイブにし体の何かが透き通り、光と重力に分裂するようには、ヴァルに作用しなかったのだ。彼にとって、そのベッド、雲の中の、粒の近さとその痛覚で体が分かることと、何か遊びがはじまること、それだけが大事であったということ。粒が世界から上にはね出て行って、ハイパスフィルターがハイに突き抜けるように、白が消えて、世界が再び開けた。ヴァルの足元に、大きく青い海と、真っ黒い火山が広がっていて、あらゆる色が濃く見えて、鳥も魚も犬も飛行機もいた。「すべてのものにキスしちゃおっかなわあ」とヴァルに思考が流れて、走り始めたばかりの体を動かして、暖かい空気を抱きかかえたり、飛行機の翼に尿をはねさせたり、鳥のように歌ったり、野犬とボクシングをして仲良くして、それらを全部同時にヴァルはこなせた。<span lang="EN-US"><o:p></o:p></span></span></p>
+
+<p class="MsoNormal"><span lang="EN-US" style="font-family:&quot;Yu Gothic Light&quot;,sans-serif;
+mso-ascii-theme-font:major-latin;mso-fareast-theme-font:major-latin;mso-hansi-theme-font:
+major-latin">&nbsp;</span></p>
+
+<p class="MsoNormal"><span style="font-family:&quot;Yu Gothic Light&quot;,sans-serif;
+mso-ascii-theme-font:major-latin;mso-fareast-theme-font:major-latin;mso-hansi-theme-font:
+major-latin">　</span></p></h2>
+                <p><br></p>
+                <p><br></p>
+            </div>
+        <div class="content-block image-block">                        <img src="images/image_0_sun_god.png"></div><div class="content-block text-block">                        <h2><p class="MsoNormal"><span style="font-family: &quot;Yu Gothic Light&quot;, sans-serif;">「危機レベル１に到達。オアフ島火山型迎撃装置を一斉起動。エネルギー供給のために、第４銀河太陽へのゲートも開放。一斉に放出せよ。」オアフ島の地下深くマントルに眠るゲートが開いて、第４銀河太陽ミラリスのエネルギーでとてつもない胎動が、地球を震わし、地下の液体が激烈に光を放射して、バチーン。オアフ島からマグマが噴き出した。<span lang="EN-US"><o:p></o:p></span></span></p><p class="MsoNormal"><span style="font-family: &quot;Yu Gothic Light&quot;, sans-serif;">　「うわーかっこいい！俺この色もめっちゃ好き！」ヴァルはこの時初めて見る赤色に、耳を膨張させて、筋肉に硬質性があることを体験した。ヴァルの見つめるこの星の表面、地球の海や大地は鮮烈なマグマの赤にとんでもないスピードでかき替えられ、その噴出孔の破裂する黒くにじんたグロテスクは、ヴァルの筋肉を鍛え上げ、硬さを覚えたヴァルは稠密する硬さの中にうごめくエナジーが、何とか奇跡的に形を保っているだけだと筋肉の繊維に流れる血のようなもので知る。「ヴァーナル！」<span lang="EN-US"><o:p></o:p></span></span></p><p class="MsoNormal"><span style="font-family: &quot;Yu Gothic Light&quot;, sans-serif;">　その叫びに一瞬マグマがたじろぎ、やさしい炎のようにヴァルの視界を覆いつくすほどまで眼球に近づき、彼を抱え込んだ。皮膚が熱に包まれ、熱は全身をビートではなくライザー、音響のクレッシェンドに変容させるも、ライザーする世界に、ヴァルが瞼をつむらすことはなかった。ループするビートではなくてこのひたすら上っていくライザーはホワイトノイズに破裂することを防ぎながら、叫びのこもった歪みにおいてエネルギーを増してくライザーであり、ヴァルは目を見開き、鼻をかっぴらいて、七つの穴をもって開いて、超高温のマグマに抱きつかれ、生まれたばかりのヴァル、なのにもう奥深いところのこころを、全身の筋肉、それにほとばしる血液に増強させ、咆哮する<span lang="EN-US">!!!<o:p></o:p></span></span></p><p class="MsoNormal"><span lang="EN-US" style="font-family: &quot;Yu Gothic Light&quot;, sans-serif;">&nbsp;</span></p><p class="MsoNormal"><span style="font-family: &quot;Yu Gothic Light&quot;, sans-serif;">　　　　　〈グわおおおおーん〉<span lang="EN-US"><o:p></o:p></span></span></p><p class="MsoNormal"><span lang="EN-US" style="font-family: &quot;Yu Gothic Light&quot;, sans-serif;">&nbsp;</span></p><p class="MsoNormal"><span style="font-family: &quot;Yu Gothic Light&quot;, sans-serif;">　空気を震わす轟音が響いて、空は、ショットに貫かれたような沈黙さ、ここで一回。歴史にセルフィが刻まれる。歴史の映画の上映、映画館の客、エロい体をシャッと街に切り込みいれる、エロいギャルのスマホのシャッターに切断され、その断絶面から、新しいセルフィ―、あたらしい自我の時間軸が始まった。赤く勃起したちんこがたくましく、すべてに広がった光にさらされて、大いなる影がマグマをファックし、ヴァルは体のおくのエネルギーをその咆哮で、すべてマグマにぶつけた。マグマはヴァルのものになった。ヴァルはマグマの蠢き、空間を駆け巡ってくその動きの、中心核として分裂し、それは二つのヴァルに分裂が起きたということ。二つの焦点がマグマの空間的な広がりを作っていくように。そしてマグマは、ヴァルの血液の奥深くを常に沸騰させる、巨大で獰猛な溶鉱炉となったのだ。一つの焦点は、ミラリスへのゲートのあった地球の核に。もう一つの焦点は、ハイスピードで宇宙を駆け回った。そしてこのヴァルの分裂した二つの焦点というものは点自体の持つエネルギーの流れにより、マグマを空間的に自由自在に変容し引き延ばしては、絞ったりなど宇宙空間に自由に絵を描けるのだ。そしてそれを描く手、宇宙にマグマで自由にお絵かきを遊ぶ手、その実存の焦点が、地球の核に存在しだした。<span lang="EN-US"><o:p></o:p></span></span></p><p class="MsoNormal"><span lang="EN-US" style="font-family: &quot;Yu Gothic Light&quot;, sans-serif;">&nbsp;</span></p></h2>            <p><br></p></div></article>
+
+        <footer>
+            <p>© 2025 HOME///SPACESHIP. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <!-- JSZip -->
+    
+
+    
+
+
+</body></html>
